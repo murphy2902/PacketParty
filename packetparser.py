@@ -9,7 +9,7 @@ Created on Sat Sep 26 20:18:59 2015
 import re
 import socket
 import subprocess 
-#import os
+import os
 
 # python file that when executed will read a file and regex out only the lines that we want that have Origin and Destination IPs with thier timestamps, an additionall column will be added to that row that will be the d/dt of the timestamps
 
@@ -49,17 +49,30 @@ def parseTcpStream(result):
 
 packetdata = open('modelpacketCapture.txt', 'r')
 outputfile = open('mongoData', 'a')
+count = 0
+iplist = []
 for i in packetdata:
     matchObj = re.match(r'(\d\d:\d\d:\d\d).*(IP\s[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\.(.*)\s>\s([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)', i)
     if matchObj is None:
+        count += 1
         continue
     
-    ShadowServerOrg = queryDNS('asn.shadowserver.org', matchObj.group(2)[3:])
+    #ShadowServerOrg = queryDNS('asn.shadowserver.org', matchObj.group(2)[3:])
     
-    k = matchObj.group(1) + " , " + matchObj.group(3) + " , " + matchObj.group(2) + " , " + matchObj.group(4) + " , " + ShadowServerOrg + "\r\n"
+    if matchObj.group(2)[3:] not in iplist:
+        iplist.append(matchObj.group(2)[3:])
+    
+    k = matchObj.group(1) + " , " + matchObj.group(3) + " , " + matchObj.group(2) + " , " + matchObj.group(4) + "\r\n"
     
     outputfile.write(k)
+    
+    count += 1
+    print str(count) + ' / ' + str(os.fstat(packetdata.fileno()).st_size)
 
+for i in iplist:
+    ShadowServerOrg = queryDNS('asn.shadowserver.org', i)
+    outputfile.write(i + ' , ' + ShadowServerOrg)
 
+print 'done'
     
     
